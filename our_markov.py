@@ -2,7 +2,14 @@
 
 from random import choice
 import sys
+import twitter
+import os
 
+api = twitter.Api(
+    consumer_key=os.environ['TWITTER_CONSUMER_KEY'],
+    consumer_secret=os.environ['TWITTER_CONSUMER_SECRET'],
+    access_token_key=os.environ['TWITTER_ACCESS_TOKEN_KEY'],
+    access_token_secret=os.environ['TWITTER_ACCESS_TOKEN_SECRET'])
 
 def open_and_read_file(*file_paths):
     """Take file path as string; return text as string.
@@ -92,8 +99,10 @@ def make_text(chains, n):
 
     markov_sentence = make_first_link(chains)
 
-    while True:
+    while (len(' '.join(markov_sentence))) <= 130:
+
         last_n_words = tuple(markov_sentence[-n:])
+
         if last_n_words not in chains:
             break
 
@@ -101,24 +110,40 @@ def make_text(chains, n):
 
         markov_sentence.append(last_word)
 
-        if last_word[-1] in '.!?"':
+        if last_word[-1] in '.!?"-':
             break
 
     return " ".join(markov_sentence)
+
+
+def tweet(chains, n):
+
+    random_text = make_text(chains, n)
+    print 'first', random_text
+
+    status = api.PostUpdate(random_text)
+
+    tweet_again = True
+    while tweet_again:
+        exit = raw_input("Enter to tweet again [q to quit]> ")
+        if exit.lower() != "q":
+            random_text = make_text(chains, n)
+            print 'loop', random_text
+            status = api.PostUpdate(random_text)
+            print status.text
+        else:
+            tweet_again = False
 
 
 input_path = sys.argv[1:]
 
 # Open the file and turn it into one long string
 input_text = open_and_read_file(input_path)
-# print input_text
+
+n = 3
 
 # Get a Markov chain
-n = 3
 chains = make_chains(input_text, n)
-
-
-# Produce random text
-random_text = make_text(chains, n)
-
-print random_text
+# print chains
+print make_text(chains, n)
+tweet(chains, n)
